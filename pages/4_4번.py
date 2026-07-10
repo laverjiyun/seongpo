@@ -1,13 +1,9 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
+import plotly.express as px
 
-# 1. 페이지 레이아웃 및 폰트 세팅 (한글 깨짐 방지 처리 포함)
+# 1. 페이지 레이아웃 설정
 st.set_page_config(page_title="안산 상권 빅데이터 분석", layout="wide")
-
-# 한글 폰트 설정 (Windows/Mac 공통 지원용)
-plt.rcParams['font.family'] = 'Malgun Gothic' # 윈도우 기본 폰트
-plt.rcParams['axes.unicode_minus'] = False
 
 # 깔끔한 대시보드 테마 CSS
 st.markdown("""
@@ -43,10 +39,10 @@ page = st.sidebar.radio(
      "💡 종합 결론: 10대 이동 원인"]
 )
 st.sidebar.markdown("---")
-st.sidebar.caption("안산시 청소년 상권 이동 패턴 분석 프로젝트 v4.0")
+st.sidebar.caption("안산시 청소년 상권 이동 패턴 분석 프로젝트 v4.1")
 
 # ==========================================
-# Page 1. 성포고 주변 상권 현황 (원형 그래프 중심)
+# Page 1. 성포고 주변 상권 현황 (Plotly 내장 도넛 차트)
 # ==========================================
 if page == "🏫 성포고 주변 상권 현황":
     st.title("🏫 성포고등학교 주변 상권 분석")
@@ -62,19 +58,19 @@ if page == "🏫 성포고 주변 상권 현황":
         
     st.markdown("---")
     
-    # Matplotlib 도넛 차트 생성
-    sp_counts = seongpo_df["업종분류"].value_counts()
+    # 폰트 에러 없는 Plotly 도넛 차트
+    sp_counts = seongpo_df["업종분류"].value_counts().reset_index()
+    sp_counts.columns = ["업종분류", "점포수"]
     
-    fig, ax = plt.subplots(figsize=(6, 4))
-    colors = ['#ff9999','#ffc000','#8fd9b6','#d395d0','#ececec']
-    wedgeprops={'width': 0.4, 'edgecolor': 'w', 'linewidth': 2}
-    
-    ax.pie(sp_counts, labels=sp_counts.index, autopct='%1.1f%%', startangle=90, colors=colors, wedgeprops=wedgeprops)
-    ax.set_title("성포고 주변 상권 업종 구성 비율", fontsize=14, weight='bold', pad=20)
+    fig = px.pie(sp_counts, values='점포수', names='업종분류', hole=0.4,
+                 title="성포고 주변 상권 업종 구성 비율",
+                 color_discrete_sequence=px.colors.qualitative.Pastel)
+    fig.update_traces(textposition='inside', textinfo='percent+label')
+    fig.update_layout(showlegend=False, margin=dict(t=50, b=20, l=20, r=20))
     
     col_chart, col_info = st.columns([2, 1])
     with col_chart:
-        st.pyplot(fig) # 표 대신 깔끔한 도넛 그래프 출력
+        st.plotly_chart(fig, use_container_width=True)
     with col_info:
         st.markdown("### 📋 그래프 주요 특징")
         st.write("- **고가음식점 및 일반음식점**이 상권의 절반 이상을 차지합니다.")
@@ -82,7 +78,7 @@ if page == "🏫 성포고 주변 상권 현황":
 
 
 # ==========================================
-# Page 2. 중앙동 로데오 상권 현황 (원형 그래프 중심)
+# Page 2. 중앙동 로데오 상권 현황 (Plotly 내장 도넛 차트)
 # ==========================================
 elif page == "🛍️ 중앙동 로데오 상권 현황":
     st.title("🛍️ 중앙동 로데오 상권 분석")
@@ -98,19 +94,19 @@ elif page == "🛍️ 중앙동 로데오 상권 현황":
         
     st.markdown("---")
     
-    # Matplotlib 도넛 차트 생성
-    ja_counts = jungang_df["업종분류"].value_counts()
+    # 폰트 에러 없는 Plotly 도넛 차트
+    ja_counts = jungang_df["업종분류"].value_counts().reset_index()
+    ja_counts.columns = ["업종분류", "점포수"]
     
-    fig, ax = plt.subplots(figsize=(6, 4))
-    colors = ['#8fd9b6','#ffc000','#66b3ff','#ff9999','#ececec']
-    wedgeprops={'width': 0.4, 'edgecolor': 'w', 'linewidth': 2}
-    
-    ax.pie(ja_counts, labels=ja_counts.index, autopct='%1.1f%%', startangle=90, colors=colors, wedgeprops=wedgeprops)
-    ax.set_title("중앙동 로데오 상권 업종 구성 비율", fontsize=14, weight='bold', pad=20)
+    fig = px.pie(ja_counts, values='점포수', names='업종분류', hole=0.4,
+                 title="중앙동 로데오 상권 업종 구성 비율",
+                 color_discrete_sequence=px.colors.qualitative.Pastel)
+    fig.update_traces(textposition='inside', textinfo='percent+label')
+    fig.update_layout(showlegend=False, margin=dict(t=50, b=20, l=20, r=20))
     
     col_chart, col_info = st.columns([2, 1])
     with col_chart:
-        st.pyplot(fig) # 표 대신 깔끔한 도넛 그래프 출력
+        st.plotly_chart(fig, use_container_width=True)
     with col_info:
         st.markdown("### 📋 그래프 주요 특징")
         st.write("- **학생편의 및 카페/디저트, 패션/쇼핑**이 핵심 축을 이룹니다.")
@@ -118,7 +114,7 @@ elif page == "🛍️ 중앙동 로데오 상권 현황":
 
 
 # ==========================================
-# Page 3. 상권별 청소년 수용력 실험 (가로 막대 그래프 시각화)
+# Page 3. 상권별 청소년 수용력 실험 (Plotly 내장 가로 막대 그래프)
 # ==========================================
 elif page == "🧪 상권별 청소년 수용력 실험":
     st.title("🧪 Page 3. 두 상권의 청소년 유효 수요 수용력 대조 실험")
@@ -133,24 +129,21 @@ elif page == "🧪 상권별 청소년 수용력 실험":
     sp_count = len(seongpo_df[(seongpo_df["평균가격"] <= user_budget) & (seongpo_df["주타겟층"].isin(user_ages))])
     ja_count = len(jungang_df[(jungang_df["평균가격"] <= user_budget) & (jungang_df["주타겟층"].isin(user_ages))])
     
-    # 가로 막대 그래프(Barh) 시각화
-    fig, ax = plt.subplots(figsize=(6, 2))
-    categories = ['성포고 주변', '중앙동 로데오']
-    counts = [sp_count, ja_count]
-    bar_colors = ['#ff9999', '#66b3ff']
+    # 폰트 에러 없는 Plotly 가로 막대 그래프
+    sim_data = pd.DataFrame({
+        "상권분류": ["성포고 주변", "중앙동 로데오"],
+        "진입 가능 매장 수 (개)": [sp_count, ja_count]
+    })
     
-    bars = ax.barh(categories, counts, color=bar_colors, height=0.5)
-    ax.set_xlim(0, 200)
-    ax.set_xlabel('진입 가능 매장 수 (개)')
-    ax.set_title(f'{user_budget:,}원 이하 예산 시 상권별 학생 수용력 비교', fontsize=11, weight='bold', pad=10)
+    fig = px.bar(sim_data, x="진입 가능 매장 수 (개)", y="상권분류", orientation='h',
+                 text="진입 가능 매장 수 (개)", 
+                 title=f"{user_budget:,}원 이하 예산 시 상권별 학생 수용력 비교",
+                 color="상권분류", color_discrete_sequence=["#ff9999", "#66b3ff"])
     
-    # 막대 끝에 숫자 표시
-    for bar in bars:
-        width = bar.get_width()
-        ax.text(width + 5, bar.get_y() + bar.get_height()/2, f'{int(width)}개', 
-                va='center', ha='left', fontsize=10, weight='bold')
-                
-    st.pyplot(fig)
+    fig.update_traces(textposition='outside')
+    fig.update_layout(xaxis=dict(range=[0, 210]), showlegend=False, margin=dict(t=50, b=20, l=20, r=20))
+    
+    st.plotly_chart(fig, use_container_width=True)
     
     st.info(f"💡 **실험 해석:** 슬라이더를 10대 현실 예산 범위로 낮출수록 **성포고 상권 막대 그래프는 급격히 줄어들지만, 중앙동 로데오 그래프는 길게 살아남습니다.** 학생들이 동네에서 갈 곳을 잃어 중앙동으로 밀려나고 있음을 증명하는 정량적 지표입니다.")
 
@@ -162,12 +155,12 @@ elif page == "💡 종합 결론: 10대 이동 원인":
     st.title("💡 Page 4. 데이터로 입증된 청소년 유동인구 이탈 원인")
     st.markdown("##### 400개 실제 매장 데이터를 대조하여 도출한 최종 학술 리포트")
     
-    st.markdown("## 📈 두 상권의 업종 분포 비교 (세로 막대 그래프)")
+    st.markdown("<h2>📈 두 상권의 업종 분포 비교 (세로 막대 그래프)</h2>", unsafe_allow_html=True)
     sp_chart = seongpo_df["업종분류"].value_counts().rename("성포고 주변")
     ja_chart = jungang_df["업종분류"].value_counts().rename("중앙동 로데오")
     total_chart = pd.concat([sp_chart, ja_chart], axis=1).fillna(0)
     
-    # 깔끔한 세로 막대 그래프 출력
+    # 스트림릿 내장 기본 차트 (절대 깨지지 않음)
     st.bar_chart(total_chart)
     
     st.markdown("---")
