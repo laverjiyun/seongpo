@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import os
 
 # 1. 페이지 레이아웃 및 웹 브라우저 탭 설정
 st.set_page_config(page_title="안산 상권 빅데이터 분석", layout="wide")
@@ -15,7 +16,6 @@ st.markdown("""
     h3 { color: #1E3A8A; font-weight: 600; }
     div[data-testid="stMetricValue"] { font-size: 32px; font-weight: 700; color: #1D4ED8; }
     
-    /* 종합 결론 페이지 전용 스타일 */
     .conclusion-box {
         background-color: #EFF6FF;
         padding: 25px;
@@ -28,22 +28,35 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 2. 구글 맵 기준 실존 매장 데이터 불러오기
-@st.cache_data
-def load_data():
-    return pd.read_csv("ansan_commercial_cleaned_final.csv")
+# 2. 구글 맵 기준 실존 매장 데이터 불러오기 (오류 방어 로직 강화)
+file_name = "ansan_commercial_cleaned_final.csv"
 
-try:
-    df = load_data()
-except Exception as e:
-    st.error("데이터 파일(ansan_commercial_cleaned_final.csv)을 찾을 수 없습니다. 파일명이 정확한지 확인해 주세요.")
+if not os.path.exists(file_name):
+    st.error(f"❌ 에러 발생: `{file_name}` 파일을 찾을 수 없습니다!")
+    st.info("💡 해결 방법: 현재 `app.py` 파일이 있는 동일한 폴더 안에 데이터 파일이 존재하는지 꼭 확인해 주세요.")
     st.stop()
 
-# 각 상권별로 정확히 상위 100개씩만 슬라이싱하여 데이터 무결성 확보
-seongpo_df = df[df["상권분류"] == "성포고주변"].head(100)
-jungang_df = df[df["상권분류"] == "중앙동로데오"].head(100)
+@st.cache_data
+def load_data():
+    return pd.read_csv(file_name)
 
-# 3. 사이드바 목차 (4개 페이지 구조)
+df = load_data()
+
+# 필수 컬럼이 누락되었는지 검증
+required_cols = ["상권분류", "업종분류", "평균가격", "주타겟층", "가게이름"]
+missing_cols = [col for col in required_cols if col not in df.columns]
+if missing_cols:
+    st.error(f"❌ 에러 발생: 데이터 파일 내에 필수 컬럼({missing_cols})이 누락되었습니다.")
+    st.stop()
+
+# 각 상권별로 안전하게 데이터 분리 및 100개 제한
+seongpo_df = df[df["grid_sub"] == "성포고주변"].head(100) if "grid_sub" in df.columns else df[df["상권분류"] == "성포고주변"].head(100)
+jungang_df = df[df["grid_sub"] == "중앙동로데오"].head(100) if "grid_sub" in df.columns else df[df["상권분류"] == "중앙동로데오"].head(100)
+
+if len(seongpo_df) == 0 or len(jungang_df) == 0:
+    st.warning("⚠️ 경고: '성포고주변' 또는 '중앙동로데오' 상권 데이터를 찾지 못했습니다. CSV 파일의 '상권분류' 컬럼 값을 확인해 주세요.")
+
+# 3. 사이드바 목차
 st.sidebar.markdown("## 📂 분석 목차")
 page = st.sidebar.radio(
     "이동할 페이지를 선택하세요",
@@ -53,7 +66,7 @@ page = st.sidebar.radio(
      "💡 종합 결론: 데이터가 말하는 진실"]
 )
 st.sidebar.markdown("---")
-st.sidebar.caption("안산시 청소년 상권 이동 및 정책 제언 대시보드 v6.3")
+st.sidebar.caption("안산시 청소년 상권 이동 및 정책 제언 대시보드 v6.4")
 
 
 # ==========================================
@@ -63,28 +76,32 @@ if page == "🏫 성포고 주변 상권 현황":
     st.title("🏫 성포고등학교 주변 상권 분석")
     st.markdown("##### 학교 정문 앞 및 주거 배후지 100개 실존 매장의 업종 구성 비율을 시각화합니다.")
     
-    m1, m2, m3 = st.columns(3)
-    with m1: st.metric("총 분석 점포 수", f"{len(seongpo_df)} 개")
-    with m2: st.metric("상권 평균 단가", f"{int(seongpo_df['평균가격'].mean()):,} 원")
-    with m3: st.metric("가장 밀집된 업종", seongpo_df["업종분류"].value_counts().index[0])
+    if len(seongpo_df) > 0:
+        avg_price = int(seongpo_df['평균가격'].mean()) if not seongpo_df['평균가격'].isnull().all() else 0
+        top_cate = seongpo_df["업종분류"].value_counts().index[0] if not seongpo_df["업종분류"].empty else "없음"
         
-    st.markdown("---")
-    # value_counts() 명시적 변환으로 하위 호환성 오류 방지
-    sp_counts = seongpo_df["업종분류"].value_counts().reset_index()
-    sp_counts.columns = ["업종분류", "점포수"]
-    
-    fig = px.pie(sp_counts, values='점포수', names='업종분류', hole=0.4,
-                 title="성포고 주변 상권 업종 구성 비율 (100개 샘플)", color_discrete_sequence=px.colors.qualitative.Pastel)
-    fig.update_traces(textposition='inside', textinfo='percent+label')
-    fig.update_layout(showlegend=False, margin=dict(t=50, b=20, l=20, r=20))
-    
-    col_chart, col_info = st.columns([2, 1])
-    with col_chart: st.plotly_chart(fig, use_container_width=True)
-    with col_info:
-        st.markdown("### 📋 그래프 주요 특징")
-        st.write("- **고가음식점 및 일반음식점**이 상권의 절반 이상을 차지합니다.")
-        st.write("- 아파트 단지 배후 상권 특성상 가족 외식이나 성인 타겟 위주의 인프라가 구축되어 있습니다.")
-
+        m1, m2, m3 = st.columns(3)
+        with m1: st.metric("총 분석 점포 수", f"{len(seongpo_df)} 개")
+        with m2: st.metric("상권 평균 단가", f"{avg_price:,} 원")
+        with m3: st.metric("가장 밀집된 업종", top_cate)
+            
+        st.markdown("---")
+        sp_counts = seongpo_df["업종분류"].value_counts().reset_index()
+        sp_counts.columns = ["업종분류", "점포수"]
+        
+        fig = px.pie(sp_counts, values='점포수', names='업종분류', hole=0.4,
+                     title="성포고 주변 상권 업종 구성 비율 (100개 샘플)", color_discrete_sequence=px.colors.qualitative.Pastel)
+        fig.update_traces(textposition='inside', textinfo='percent+label')
+        fig.update_layout(showlegend=False, margin=dict(t=50, b=20, l=20, r=20))
+        
+        col_chart, col_info = st.columns([2, 1])
+        with col_chart: st.plotly_chart(fig, use_container_width=True)
+        with col_info:
+            st.markdown("### 📋 그래프 주요 특징")
+            st.write("- **고가음식점 및 일반음식점**이 상권의 절반 이상을 차지합니다.")
+            st.write("- 아파트 단지 배후 상권 특성상 가족 외식이나 성인 타겟 위주의 인프라가 구축되어 있습니다.")
+    else:
+        st.info("표시할 성포고 주변 상권 데이터가 없습니다.")
 
 # ==========================================
 # Page 2. 중앙동 로데오 상권 현황
@@ -93,28 +110,32 @@ elif page == "🛍️ 중앙동 로데오 상권 현황":
     st.title("🛍️ 중앙동 로데오 상권 분석")
     st.markdown("##### 안산 최대 중심지인 중앙역 로데오거리 100개 실존 매장의 업종 구성 비율을 시각화합니다.")
     
-    m1, m2, m3 = st.columns(3)
-    with m1: st.metric("총 분석 점포 수", f"{len(jungang_df)} 개")
-    with m2: st.metric("상권 평균 단가", f"{int(jungang_df['평균가격'].mean()):,} 원")
-    with m3: st.metric("가장 밀집된 업종", jungang_df["업종분류"].value_counts().index[0])
+    if len(jungang_df) > 0:
+        avg_price = int(jungang_df['평균가격'].mean()) if not jungang_df['평균가격'].isnull().all() else 0
+        top_cate = jungang_df["업종분류"].value_counts().index[0] if not jungang_df["업종분류"].empty else "없음"
         
-    st.markdown("---")
-    # value_counts() 명시적 변환으로 하위 호환성 오류 방지
-    ja_counts = jungang_df["업종분류"].value_counts().reset_index()
-    ja_counts.columns = ["업종분류", "점포수"]
-    
-    fig = px.pie(ja_counts, values='점포수', names='업종분류', hole=0.4,
-                 title="중앙동 로데오 상권 업종 구성 비율 (100개 샘플)", color_discrete_sequence=px.colors.qualitative.Pastel)
-    fig.update_traces(textposition='inside', textinfo='percent+label')
-    fig.update_layout(showlegend=False, margin=dict(t=50, b=20, l=20, r=20))
-    
-    col_chart, col_info = st.columns([2, 1])
-    with col_chart: st.plotly_chart(fig, use_container_width=True)
-    with col_info:
-        st.markdown("### 📋 그래프 주요 특징")
-        st.write("- **학생편의 및 카페/디저트** 업종의 밀집도가 매우 높습니다.")
-        st.write("- 10대 청소년들이 하교 후 곧바로 유입되어 소비할 수 있는 맞춤형 상권 특성이 두드러집니다.")
-
+        m1, m2, m3 = st.columns(3)
+        with m1: st.metric("총 분석 점포 수", f"{len(jungang_df)} 개")
+        with m2: st.metric("상권 평균 단가", f"{avg_price:,} 원")
+        with m3: st.metric("가장 밀집된 업종", top_cate)
+            
+        st.markdown("---")
+        ja_counts = jungang_df["업종분류"].value_counts().reset_index()
+        ja_counts.columns = ["업종분류", "점포수"]
+        
+        fig = px.pie(ja_counts, values='점포수', names='업종분류', hole=0.4,
+                     title="중앙동 로데오 상권 업종 구성 비율 (100개 샘플)", color_discrete_sequence=px.colors.qualitative.Pastel)
+        fig.update_traces(textposition='inside', textinfo='percent+label')
+        fig.update_layout(showlegend=False, margin=dict(t=50, b=20, l=20, r=20))
+        
+        col_chart, col_info = st.columns([2, 1])
+        with col_chart: st.plotly_chart(fig, use_container_width=True)
+        with col_info:
+            st.markdown("### 📋 그래프 주요 특징")
+            st.write("- **학생편의 및 카페/디저트** 업종의 밀집도가 매우 높습니다.")
+            st.write("- 10대 청소년들이 하교 후 곧바로 유입되어 소비할 수 있는 맞춤형 상권 특성이 두드러집니다.")
+    else:
+        st.info("표시할 중앙동 로데오 상권 데이터가 없습니다.")
 
 # ==========================================
 # Page 3. 상권별 청소년 수용력 실험
@@ -125,9 +146,8 @@ elif page == "🧪 상권별 청소년 수용력 실험":
     
     user_budget = st.slider("💰 학생 1인당 지출 예산 한도 (원)", 1000, 30000, 8500, step=500)
     
-    # 10대 타겟이면서 사용자의 예산 이하인 점포 수 계산 (상권별 각 100개 기준)
-    sp_count = len(seongpo_df[(seongpo_df["평균가격"] <= user_budget) & (seongpo_df["주타겟층"].str.contains("10"))])
-    ja_count = len(jungang_df[(jungang_df["평균가격"] <= user_budget) & (jungang_df["주타겟층"].str.contains("10"))])
+    sp_count = len(seongpo_df[(seongpo_df["평균가격"] <= user_budget) & (seongpo_df["주타겟층"].astype(str).str.contains("10"))])
+    ja_count = len(jungang_df[(jungang_df["평균가격"] <= user_budget) & (jungang_df["주타겟층"].astype(str).str.contains("10"))])
     
     sim_data = pd.DataFrame({
         "상권": ["성포고 주변 상권 (100개 중)", "중앙동 로데오 상권 (100개 중)"], 
@@ -142,7 +162,6 @@ elif page == "🧪 상권별 청소년 수용력 실험":
     
     st.info(f"💡 설정한 예산 한도 내에서 각 상권(100개 기준)이 청소년을 얼마나 수용할 수 있는지 명확하게 대조해 줍니다.")
 
-
 # ==========================================
 # Page 4. 종합 결론 (안산시청 정책 제언)
 # ==========================================
@@ -151,7 +170,6 @@ elif page == "💡 종합 결론: 데이터가 말하는 진실":
     st.markdown("##### 각 상권당 100개씩 총 200개의 실존 매장 빅데이터를 분석하여 도출한 최종 리포트입니다.")
 
     st.markdown("## 1. 상권 구조의 근본적인 미스매치")
-    # 레이더 차트 매핑을 위한 데이터 정렬 구조 보완
     all_categories = df["업종분류"].unique()
     sp_v = seongpo_df["업종분류"].value_counts().reindex(all_categories, fill_value=0)
     ja_v = jungang_df["업종분류"].value_counts().reindex(all_categories, fill_value=0)
@@ -164,12 +182,14 @@ elif page == "💡 종합 결론: 데이터가 말하는 진실":
 
     st.markdown("---")
 
+    sp_mean = int(seongpo_df['평균가격'].mean()) if len(seongpo_df) > 0 and not seongpo_df['평균가격'].isnull().all() else 0
+
     col1, col2 = st.columns(2)
     with col1:
         st.markdown("### 🛑 성포동 상권의 장벽: <span class='critical'>'경제적 단절'</span>", unsafe_allow_html=True)
         st.markdown(f"""
         <div class="conclusion-box">
-        성포고 주변 매장 데이터의 평균 가격은 <b>{int(seongpo_df['평균가격'].mean()):,}원</b>으로 형성되어 있습니다.<br><br>
+        성포고 주변 매장 데이터의 평균 가격은 <b>{sp_mean:,}원</b>으로 형성되어 있습니다.<br><br>
         1. <b>지불 능력의 한계:</b> 고가음식점 비율이 높고 병원, 약국 위주여서 10대의 가처분 소득으로 접근 가능한 매장이 현저히 부족합니다.<br>
         2. <b>타겟 미스매치:</b> 주타겟층의 60% 이상이 성인층에 맞춰져 있어, 하교 후 학생들을 수용할 심리적 공간이 부족합니다.
         </div>
@@ -186,8 +206,7 @@ elif page == "💡 종합 결론: 데이터가 말하는 진실":
         """, unsafe_allow_html=True)
 
     st.markdown("---")
-
-    st.markdown("## 🏛️ 안산시청 정책 제언: 주거 밀집 지역 내 '공공 청소년 쉼터' 조성 촉구")
+    st.markdown("<h2>🏛️ 안산시청 정책 제언: 주거 밀집 지역 내 '공공 청소년 쉼터' 조성 촉구</h2>", unsafe_allow_html=True)
     
     st.success("""
     **데이터 분석 결과 기반 최종 정책 리포트**
@@ -197,5 +216,3 @@ elif page == "💡 종합 결론: 데이터가 말하는 진실":
     
     이는 청소년들에게 안전하고 저렴한 공간을 제공하는 동시에, 인근 가성비 로컬 점포들과 연계하여 침체된 배후 상권까지 심폐소생할 수 있는 가장 확실하고 실효성 있는 킬러 정책이 될 것입니다.
     """)
-    
-    st.markdown("<br><br><center><b>본 대시보드는 안산시 청소년 상권 이동 빅데이터 분석 및 로컬 정책 개발 프로젝트를 위해 제작되었습니다.</b></center>", unsafe_allow_html=True)
