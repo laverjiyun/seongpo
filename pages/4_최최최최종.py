@@ -39,11 +39,11 @@ except Exception as e:
     st.error("데이터 파일(ansan_commercial_cleaned_final.csv)을 찾을 수 없습니다. 파일명이 정확한지 확인해 주세요.")
     st.stop()
 
-# 상권별 데이터프레임 미리 분리
-seongpo_df = df[df["상권분류"] == "성포고주변"]
-jungang_df = df[df["상권분류"] == "중앙동로데오"]
+# [수정 포인트] 각 상권별로 정확히 상위 100개씩만 슬라이싱하여 데이터 무결성 강제 확보
+seongpo_df = df[df["상권분류"] == "성포고주변"].head(100)
+jungang_df = df[df["상권분류"] == "중앙동로데오"].head(100)
 
-# 3. 사이드바 목차 (가게 추천을 빼고 4개 페이지로 슬림화)
+# 3. 사이드바 목차 (4개 페이지 구조 유지)
 st.sidebar.markdown("## 📂 분석 목차")
 page = st.sidebar.radio(
     "이동할 페이지를 선택하세요",
@@ -53,7 +53,7 @@ page = st.sidebar.radio(
      "💡 종합 결론: 데이터가 말하는 진실"]
 )
 st.sidebar.markdown("---")
-st.sidebar.caption("안산시 청소년 상권 이동 및 정책 제언 대시보드 v6.0")
+st.sidebar.caption("안산시 청소년 상권 이동 및 정책 제언 대시보드 v6.2")
 
 
 # ==========================================
@@ -72,7 +72,7 @@ if page == "🏫 성포고 주변 상권 현황":
     sp_counts = seongpo_df["업종분류"].value_counts().reset_index()
     
     fig = px.pie(sp_counts, values='count', names='업종분류', hole=0.4,
-                 title="성포고 주변 상권 업종 구성 비율", color_discrete_sequence=px.colors.qualitative.Pastel)
+                 title="성포고 주변 상권 업종 구성 비율 (100개 샘플)", color_discrete_sequence=px.colors.qualitative.Pastel)
     fig.update_traces(textposition='inside', textinfo='percent+label')
     fig.update_layout(showlegend=False, margin=dict(t=50, b=20, l=20, r=20))
     
@@ -100,7 +100,7 @@ elif page == "🛍️ 중앙동 로데오 상권 현황":
     ja_counts = jungang_df["업종분류"].value_counts().reset_index()
     
     fig = px.pie(ja_counts, values='count', names='업종분류', hole=0.4,
-                 title="중앙동 로데오 상권 업종 구성 비율", color_discrete_sequence=px.colors.qualitative.Pastel)
+                 title="중앙동 로데오 상권 업종 구성 비율 (100개 샘플)", color_discrete_sequence=px.colors.qualitative.Pastel)
     fig.update_traces(textposition='inside', textinfo='percent+label')
     fig.update_layout(showlegend=False, margin=dict(t=50, b=20, l=20, r=20))
     
@@ -117,16 +117,16 @@ elif page == "🛍️ 중앙동 로데오 상권 현황":
 # ==========================================
 elif page == "🧪 상권별 청소년 수용력 실험":
     st.title("🧪 상권별 청소년 수용력 대조 실험")
-    st.markdown("##### 설정한 지출 예산 범위 내에서 각 상권이 10대 청소년을 얼마나 수용할 수 있는지 대조합니다.")
+    st.markdown("##### 각각 100개씩 지정된 매장 중에서 설정한 예산 범위 내에 들어오는 10대 가능 점포 수를 대조합니다.")
     
     user_budget = st.slider("💰 학생 1인당 지출 예산 한도 (원)", 1000, 30000, 8500, step=500)
     
-    # 10대 타겟이면서 사용자의 예산 이하인 점포 수 계산
+    # 10대 타겟이면서 사용자의 예산 이하인 점포 수 계산 (상권별 각 100개 기준)
     sp_count = len(seongpo_df[(seongpo_df["평균가격"] <= user_budget) & (seongpo_df["주타겟층"].str.contains("10"))])
     ja_count = len(jungang_df[(jungang_df["평균가격"] <= user_budget) & (jungang_df["주타겟층"].str.contains("10"))])
     
     sim_data = pd.DataFrame({
-        "상권": ["성포고 주변 상권", "중앙동 로데오 상권"], 
+        "상권": ["성포고 주변 상권 (100개 중)", "중앙동 로데오 상권 (100개 중)"], 
         "수용 가능한 매장 수": [sp_count, ja_count]
     })
     
@@ -136,30 +136,30 @@ elif page == "🧪 상권별 청소년 수용력 실험":
     fig_bar.update_layout(showlegend=False)
     st.plotly_chart(fig_bar, use_container_width=True)
     
-    st.info(f"💡 예산이 낮을수록 성포고 주변 상권의 바 차트가 급격히 줄어들며, 청소년들이 동네에서 소외당하고 있음이 시각적으로 증명됩니다.")
+    st.info(f"💡 설정한 예산 한도 내에서 각 상권(100개 기준)이 청소년을 얼마나 수용할 수 있는지 명확하게 대조해 줍니다.")
 
 
 # ==========================================
-# Page 4. 종합 결론 (안산시청 정책 제언 중심)
+# Page 4. 종합 결론 (안산시청 정책 제언)
 # ==========================================
 elif page == "💡 종합 결론: 데이터가 말하는 진실":
     st.title("💡 종합 결론 : 안산시 청소년의 '상권 이탈' 원인과 해결책")
-    st.markdown("##### 200개 실존 매장 빅데이터 분석을 바탕으로 도출한 최종 로컬 정책 제언 리포트입니다.")
+    st.markdown("##### 각 상권당 100개씩 총 200개의 실존 매장 빅데이터를 분석하여 도출한 최종 리포트입니다.")
 
-    # 1. 두 상권의 업종 구성 차이 레이더 차트 시각화
     st.markdown("## 1. 상권 구조의 근본적인 미스매치")
-    sp_v = seongpo_df["업종분류"].value_counts().reindex(df["업종분류"].unique(), fill_value=0)
-    ja_v = jungang_df["업종분류"].value_counts().reindex(df["업종분류"].unique(), fill_value=0)
+    # 레이더 차트 매핑을 위한 업종 분류 취합
+    all_categories = df["업종분류"].unique()
+    sp_v = seongpo_df["업종분류"].value_counts().reindex(all_categories, fill_value=0)
+    ja_v = jungang_df["업종분류"].value_counts().reindex(all_categories, fill_value=0)
     
     fig_radar = go.Figure()
-    fig_radar.add_trace(go.Scatterpolar(r=sp_v.values, theta=sp_v.index, fill='toself', name='성포고 주변'))
-    fig_radar.add_trace(go.Scatterpolar(r=ja_v.values, theta=ja_v.index, fill='toself', name='중앙동 로데오'))
-    fig_radar.update_layout(polar=dict(radialaxis=dict(visible=True)), showlegend=True, title="상권별 업종 밀집도 비교 시각화")
+    fig_radar.add_trace(go.Scatterpolar(r=sp_v.values, theta=all_categories, fill='toself', name='성포고 주변'))
+    fig_radar.add_trace(go.Scatterpolar(r=ja_v.values, theta=all_categories, fill='toself', name='중앙동 로데오'))
+    fig_radar.update_layout(polar=dict(radialaxis=dict(visible=True)), showlegend=True, title="상권별 업종 밀집도 비교 시각화 (각 100개 대조)")
     st.plotly_chart(fig_radar, use_container_width=True)
 
     st.markdown("---")
 
-    # 2. 경제적 원인 분석 기술
     col1, col2 = st.columns(2)
     with col1:
         st.markdown("### 🛑 성포동 상권의 장벽: <span class='critical'>'경제적 단절'</span>", unsafe_allow_html=True)
@@ -183,7 +183,6 @@ elif page == "💡 종합 결론: 데이터가 말하는 진실":
 
     st.markdown("---")
 
-    # 3. 안산시청 정책 제언 핵심 요약 (텍스트 요약 반영)
     st.markdown("## 🏛️ 안산시청 정책 제언: 주거 밀집 지역 내 '공공 청소년 쉼터' 조성 촉구")
     
     st.success("""
