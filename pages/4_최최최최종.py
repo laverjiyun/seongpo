@@ -39,11 +39,11 @@ except Exception as e:
     st.error("데이터 파일(ansan_commercial_cleaned_final.csv)을 찾을 수 없습니다. 파일명이 정확한지 확인해 주세요.")
     st.stop()
 
-# [수정 포인트] 각 상권별로 정확히 상위 100개씩만 슬라이싱하여 데이터 무결성 강제 확보
+# 각 상권별로 정확히 상위 100개씩만 슬라이싱하여 데이터 무결성 확보
 seongpo_df = df[df["상권분류"] == "성포고주변"].head(100)
 jungang_df = df[df["상권분류"] == "중앙동로데오"].head(100)
 
-# 3. 사이드바 목차 (4개 페이지 구조 유지)
+# 3. 사이드바 목차 (4개 페이지 구조)
 st.sidebar.markdown("## 📂 분석 목차")
 page = st.sidebar.radio(
     "이동할 페이지를 선택하세요",
@@ -53,7 +53,7 @@ page = st.sidebar.radio(
      "💡 종합 결론: 데이터가 말하는 진실"]
 )
 st.sidebar.markdown("---")
-st.sidebar.caption("안산시 청소년 상권 이동 및 정책 제언 대시보드 v6.2")
+st.sidebar.caption("안산시 청소년 상권 이동 및 정책 제언 대시보드 v6.3")
 
 
 # ==========================================
@@ -69,9 +69,11 @@ if page == "🏫 성포고 주변 상권 현황":
     with m3: st.metric("가장 밀집된 업종", seongpo_df["업종분류"].value_counts().index[0])
         
     st.markdown("---")
+    # value_counts() 명시적 변환으로 하위 호환성 오류 방지
     sp_counts = seongpo_df["업종분류"].value_counts().reset_index()
+    sp_counts.columns = ["업종분류", "점포수"]
     
-    fig = px.pie(sp_counts, values='count', names='업종분류', hole=0.4,
+    fig = px.pie(sp_counts, values='점포수', names='업종분류', hole=0.4,
                  title="성포고 주변 상권 업종 구성 비율 (100개 샘플)", color_discrete_sequence=px.colors.qualitative.Pastel)
     fig.update_traces(textposition='inside', textinfo='percent+label')
     fig.update_layout(showlegend=False, margin=dict(t=50, b=20, l=20, r=20))
@@ -97,9 +99,11 @@ elif page == "🛍️ 중앙동 로데오 상권 현황":
     with m3: st.metric("가장 밀집된 업종", jungang_df["업종분류"].value_counts().index[0])
         
     st.markdown("---")
+    # value_counts() 명시적 변환으로 하위 호환성 오류 방지
     ja_counts = jungang_df["업종분류"].value_counts().reset_index()
+    ja_counts.columns = ["업종분류", "점포수"]
     
-    fig = px.pie(ja_counts, values='count', names='업종분류', hole=0.4,
+    fig = px.pie(ja_counts, values='점포수', names='업종분류', hole=0.4,
                  title="중앙동 로데오 상권 업종 구성 비율 (100개 샘플)", color_discrete_sequence=px.colors.qualitative.Pastel)
     fig.update_traces(textposition='inside', textinfo='percent+label')
     fig.update_layout(showlegend=False, margin=dict(t=50, b=20, l=20, r=20))
@@ -147,7 +151,7 @@ elif page == "💡 종합 결론: 데이터가 말하는 진실":
     st.markdown("##### 각 상권당 100개씩 총 200개의 실존 매장 빅데이터를 분석하여 도출한 최종 리포트입니다.")
 
     st.markdown("## 1. 상권 구조의 근본적인 미스매치")
-    # 레이더 차트 매핑을 위한 업종 분류 취합
+    # 레이더 차트 매핑을 위한 데이터 정렬 구조 보완
     all_categories = df["업종분류"].unique()
     sp_v = seongpo_df["업종분류"].value_counts().reindex(all_categories, fill_value=0)
     ja_v = jungang_df["업종분류"].value_counts().reindex(all_categories, fill_value=0)
