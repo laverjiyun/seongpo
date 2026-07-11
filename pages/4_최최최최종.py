@@ -1,3 +1,5 @@
+import sys
+!{sys.executable} -m pip install streamlit
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -15,7 +17,7 @@ st.markdown("""
     h2 { color: #2563EB; font-weight: 700; border-bottom: 2px solid #E5E7EB; padding-bottom: 10px; margin-top: 25px; }
     h3 { color: #1E3A8A; font-weight: 600; margin-top: 15px; }
     div[data-testid="stMetricValue"] { font-size: 32px; font-weight: 700; color: #1D4ED8; }
-    
+
     /* PPDAC 단계별 이정표 스타일 */
     .ppdac-box {
         background-color: #F8FAFC;
@@ -33,7 +35,7 @@ st.markdown("""
         line-height: 1.8;
     }
     .badge {
-        background-color: #3B82F6; color: white; padding: 3px 8px; 
+        background-color: #3B82F6; color: white; padding: 3px 8px;
         border-radius: 5px; font-size: 12px; font-weight: bold; vertical-align: middle;
     }
     </style>
@@ -67,9 +69,9 @@ jungang_df = df[df[target_col].str.contains("중앙", na=False)].head(100).copy(
 st.sidebar.markdown("# 🧭 PPDAC 프로세스")
 page = st.sidebar.radio(
     "통계적 문제해결 단계를 선택하세요",
-    ["📍 1. Problem & Plan (문제 및 계획)", 
-     "📂 2. Data (데이터 수집 및 정제)", 
-     "🧪 3. Analysis (가설 검증 및 분석)", 
+    ["📍 1. Problem & Plan (문제 및 계획)",
+     "📂 2. Data (데이터 수집 및 정제)",
+     "🧪 3. Analysis (가설 검증 및 분석)",
      "💡 4. Conclusion (인사이트 및 결론)"],
     key="ppdac_navigation_final"
 )
@@ -81,9 +83,9 @@ st.sidebar.caption("안산시 청소년 로컬 정책 연구 대시보드 v7.1")
 # Page 1. Problem & Plan (문제 정의 및 계획)
 # ==========================================
 if page == "📍 1. Problem & Plan (문제 및 계획)":
-    st.title("📍 1. Problem & Plan <span class='badge'>Step 1 & 2</span>", unsafe_allow_html=True)
+    st.markdown("📍 1. Problem & Plan <span class='badge'>Step 1 & 2</span>", unsafe_allow_html=True)
     st.markdown("##### 탐구 질문을 설정하고 이를 통계적으로 검증하기 위한 구체적인 연구 계획을 수립합니다.")
-    
+
     st.markdown("""
     <div class="ppdac-box">
         <h3>❓ 1. 연구 질문 및 가설 설정 (Problem)</h3>
@@ -92,7 +94,7 @@ if page == "📍 1. Problem & Plan (문제 및 계획)":
             <li><b>핵심 가설:</b> 성포동 상권의 높은 가격 장벽과 성인 중심 업종 구성이 10대 청소년들을 경제적·문화적으로 소외시키고 있을 것이다.</li>
         </ul>
     </div>
-    
+
     <div class="ppdac-box">
         <h3>📋 2. 통계 분석 및 데이터 수집 설계 (Plan)</h3>
         <ul>
@@ -102,7 +104,7 @@ if page == "📍 1. Problem & Plan (문제 및 계획)":
         </ul>
     </div>
     """, unsafe_allow_html=True)
-    
+
     st.info("💡 왼쪽 사이드바 메뉴를 통해 다음 단계인 '2. Data'로 이동하여 수집된 데이터 세트를 확인하세요.")
 
 
@@ -110,12 +112,12 @@ if page == "📍 1. Problem & Plan (문제 및 계획)":
 # Page 2. Data (데이터 수집 및 정제)
 # ==========================================
 elif page == "📂 2. Data (데이터 수집 및 정제)":
-    st.title("📂 2. Data Collection & Cleaning <span class='badge'>Step 3</span>", unsafe_allow_html=True)
+    st.markdown("📂 2. Data Collection & Cleaning <span class='badge'>Step 3</span>", unsafe_allow_html=True)
     st.markdown("##### 업로드된 `진짜 최최종.csv` 파일을 바탕으로 정제된 변수 프로필을 검증합니다.")
-    
+
     st.markdown(f"### 📊 최신 데이터프레임 확인 (총 점포 수: {len(df)}개)")
     st.dataframe(df, use_container_width=True)
-    
+
     st.markdown("---")
     c1, c2 = st.columns(2)
     with c1:
@@ -126,7 +128,7 @@ elif page == "📂 2. Data (데이터 수집 및 정제)":
             "탐구 내 역할": ["독립 식별자", "상권 대조 집단 분류", "업종 다양성 분석 변수", "경제적 장벽 측정 지표", "실제 청소년 수용력 검증 변수"]
         })
         st.table(variable_data)
-        
+
     with c2:
         st.markdown("### 🛠️ 최종 데이터 품질 확보 (Data Cleaning)")
         st.markdown("""
@@ -139,15 +141,15 @@ elif page == "📂 2. Data (데이터 수집 및 정제)":
 # Page 3. Analysis (가설 검증 및 분석)
 # ==========================================
 elif page == "🧪 3. Analysis (가설 검증 및 분석)":
-    st.title("🧪 3. Statistical Analysis <span class='badge'>Step 4</span>", unsafe_allow_html=True)
+    st.markdown("🧪 3. Statistical Analysis <span class='badge'>Step 4</span>", unsafe_allow_html=True)
     st.markdown("##### 두 상권의 업종 구성과 지출 예산 한도를 연계하여 가설의 유의성을 검증합니다.")
-    
+
     tab1, tab2 = st.tabs(["📊 상권별 업종 구조 대조", "💰 경제적 예산 수용력 실험"])
-    
+
     with tab1:
         st.markdown("### 상권 인프라 구성 비율 대조")
         col_sp, col_ja = st.columns(2)
-        
+
         with col_sp:
             if not seongpo_df.empty and "업종분류" in seongpo_df.columns:
                 sp_c = seongpo_df["업종분류"].value_counts().reset_index()
@@ -156,7 +158,7 @@ elif page == "🧪 3. Analysis (가설 검증 및 분석)":
                 st.plotly_chart(fig1, use_container_width=True)
             else:
                 st.info("성포동 상권의 '업종분류' 데이터가 확인되지 않습니다.")
-        
+
         with col_ja:
             if not jungang_df.empty and "업종분류" in jungang_df.columns:
                 ja_c = jungang_df["업종분류"].value_counts().reset_index()
@@ -165,33 +167,33 @@ elif page == "🧪 3. Analysis (가설 검증 및 분석)":
                 st.plotly_chart(fig2, use_container_width=True)
             else:
                 st.info("중앙동 상권의 '업종분류' 데이터가 확인되지 않습니다.")
-                
+
         st.info("📊 **통계적 패턴 요약:** 주거지 배후 상권인 성포동은 고가 외식 위주의 성인 중심 구조를 보이나, 중심지인 중앙동은 10대 접근성이 높은 카페 및 학생 편의 클러스터가 뚜렷하게 발달해 있습니다.")
 
     with tab2:
         st.markdown("### 💵 가설 검증: 학생 지출 예산 한도별 점포 수 시뮬레이션")
         user_budget = st.slider("💰 학생 1인당 지출 예산 한도 설정 (원)", 1000, 30000, 8500, step=500, key="analysis_slider_final")
-        
+
         # 안전한 조건부 카운트 계산
         if not seongpo_df.empty and "평균가격" in seongpo_df.columns and "주타겟층" in seongpo_df.columns:
             sp_count = len(seongpo_df[(seongpo_df["평균가격"] <= user_budget) & (seongpo_df["주타겟층"].astype(str).str.contains("10"))])
         else:
             sp_count = 0
-            
+
         if not jungang_df.empty and "평균가격" in jungang_df.columns and "주타겟층" in jungang_df.columns:
             ja_count = len(jungang_df[(jungang_df["평균가격"] <= user_budget) & (jungang_df["주타겟층"].astype(str).str.contains("10"))])
         else:
             ja_count = 0
-        
+
         sim_data = pd.DataFrame({
-            "상권": ["성포고 주변 상권", "중앙동 로데오 상권"], 
+            "상권": ["성포고 주변 상권", "중앙동 로데오 상권"],
             "청소년 수용 가능 매장 수": [sp_count, ja_count]
         })
-        
+
         fig_bar = px.bar(sim_data, x="청소년 수용 가능 매장 수", y="상권", orientation='h', color="상권",
                          color_discrete_sequence=["#F59E0B", "#3B82F6"], range_x=[0, 100])
         st.plotly_chart(fig_bar, use_container_width=True)
-        
+
         st.warning(f"💡 **가설 검증 결론:** 슬라이더를 낮춰 예산을 청소년 평균 소득 수준으로 맞출수록 성포동 상권 내 수용 가능 매장 수는 0에 가깝게 수렴합니다. 이는 성포동의 '경제적 단절'이 청소년 원거리 유출의 핵심 독립변수임을 수학적으로 입증합니다.")
 
 
@@ -199,15 +201,15 @@ elif page == "🧪 3. Analysis (가설 검증 및 분석)":
 # Page 4. Conclusion (인사이트 및 결론)
 # ==========================================
 elif page == "💡 4. Conclusion (인사이트 및 결론)":
-    st.title("💡 4. Conclusion & Action Plan <span class='badge'>Step 5</span>", unsafe_allow_html=True)
+    st.markdown("💡 4. Conclusion & Action Plan <span class='badge'>Step 5</span>", unsafe_allow_html=True)
     st.markdown("##### 수집된 통계 원천 데이터를 최종 해석하고 이에 대응하는 안산시 행정 정책 제언을 제안합니다.")
-    
+
     # 레이더 차트 종합 요약
     all_categories = df["업종분류"].unique() if "업종분류" in df.columns else []
     if not seongpo_df.empty and not jungang_df.empty and len(all_categories) > 0:
         sp_v = seongpo_df["업종분류"].value_counts().reindex(all_categories, fill_value=0)
         ja_v = jungang_df["업종분류"].value_counts().reindex(all_categories, fill_value=0)
-        
+
         fig_radar = go.Figure()
         fig_radar.add_trace(go.Scatterpolar(r=sp_v.values, theta=all_categories, fill='toself', name='성포고 주변 (주거밀집지역)'))
         fig_radar.add_trace(go.Scatterpolar(r=ja_v.values, theta=all_categories, fill='toself', name='중앙동 로데오 (중심지상권)'))
@@ -215,18 +217,18 @@ elif page == "💡 4. Conclusion (인사이트 및 결론)":
         st.plotly_chart(fig_radar, use_container_width=True)
 
     st.markdown("---")
-    
+
     # 정책 제언 섹션
     st.markdown("<h2>🏛️ 안산시청 정책 제언: 주거 밀집 지역 내 '공공 청소년 쉼터' 조성 촉구</h2>", unsafe_allow_html=True)
-    
+
     st.success("""
     **데이터 분석 결과 기반 최종 정책 리포트**
-    
-    새로 입력된 최신 빅데이터를 정밀 교차 검증한 결과, 성포동 상권은 높은 평균 단가와 성인층 지향 업종 편중으로 인해 10대 청소년들의 정주 여건이 심각하게 제한되어 있음이 확정되었습니다. 
-    
-    안산 청소년들이 방과 후 원거리로 무리하게 이동하는 현상을 완화하고 지역 내 균형 발전을 도모하기 위해, 안산시청은 성포동을 필두로 한 주거 밀집 배후지에 공공 청소년 스터디카페 및 가성비 문화 복합 쉼터를 즉각 확충해야 합니다. 
+
+    새로 입력된 최신 빅데이터를 정밀 교차 검증한 결과, 성포동 상권은 높은 평균 단가와 성인층 지향 업종 편중으로 인해 10대 청소년들의 정주 여건이 심각하게 제한되어 있음이 확정되었습니다.
+
+    안산 청소년들이 방과 후 원거리로 무리하게 이동하는 현상을 완화하고 지역 내 균형 발전을 도모하기 위해, 안산시청은 성포동을 필두로 한 주거 밀집 배후지에 공공 청소년 스터디카페 및 가성비 문화 복합 쉼터를 즉각 확충해야 합니다.
     """)
-    
+
     st.markdown("""
     <div class="conclusion-box">
         <h3>🎯 PPDAC 프레임워크 기반 기대효과 (Action Plan)</h3>
