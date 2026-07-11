@@ -4,8 +4,9 @@ import plotly.express as px
 import plotly.graph_objects as go
 import os
 
-# 1. 페이지 레이아웃 및 웹 브라우저 탭 설정 (앱 최상단 고정)
-st.set_page_config(page_title="PPDAC 청소년 상권 분석", layout="wide")
+# [중요] pages/ 폴더 안에 있는 서브 페이지 파일에서는 st.set_page_config()를 호출하면 안 되거나, 
+# 가장 첫 줄에 와야 합니다. 만약 메인 파일(app.py 등)에서 이미 호출했다면 아래 라인은 주석 처리하거나 지워도 됩니다.
+# st.set_page_config(page_title="PPDAC 청소년 상권 분석", layout="wide")
 
 # 세련된 데이터 과학 대시보드 테마 CSS
 st.markdown("""
@@ -16,7 +17,6 @@ st.markdown("""
     h3 { color: #1E3A8A; font-weight: 600; margin-top: 15px; }
     div[data-testid="stMetricValue"] { font-size: 32px; font-weight: 700; color: #1D4ED8; }
     
-    /* PPDAC 단계별 이정표 스타일 */
     .ppdac-box {
         background-color: #F8FAFC;
         padding: 20px;
@@ -34,34 +34,40 @@ st.markdown("""
     }
     .badge {
         background-color: #3B82F6; color: white; padding: 3px 8px; 
-        border-radius: 5px; font-size: 12px; font-weight: bold; vertical-align: middle;
+        border-radius: 5px; font-size: 14px; font-weight: bold; vertical-align: middle;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# 2. 업로드된 새 파일 이름 설정 및 안전 로딩
+# 2. 데이터 인코딩 에러 우회 및 안전 로딩
+# Streamlit Cloud 환경을 고려하여 상위 폴더나 현재 폴더에서 파일을 유연하게 찾도록 설정
 file_name = "진짜 최최종.csv"
 
 if not os.path.exists(file_name):
-    st.error(f"❌ 데이터 파일 `{file_name}`을 찾을 수 없습니다.")
-    st.info("💡 해결 방법: 다운로드받은 엑셀 파일명을 정확히 `진짜 최최종.csv`로 변경한 뒤, `app.py`와 같은 폴더에 넣어주세요.")
-    st.stop()
+    # 만약 상위 폴더에 있다면 경로 재조정
+    if os.path.exists(f"../{file_name}"):
+        file_name = f"../{file_name}"
+    else:
+        st.error(f"❌ 데이터 파일 `{file_name}`을 찾을 수 없습니다.")
+        st.info("💡 해결 방법: `진짜 최최종.csv` 파일이 깃허브 리포지토리 루트(최상위) 폴더에 있는지 확인해 주세요.")
+        st.stop()
 
-# 동적 로딩으로 세션 충돌 방지
-df = pd.read_csv(file_name)
+try:
+    df = pd.read_csv(file_name, encoding='utf-8')
+except UnicodeDecodeError:
+    try:
+        df = pd.read_csv(file_name, encoding='cp949')
+    except Exception:
+        df = pd.read_csv(file_name, encoding='utf-8-sig')
 
-# 컬럼명 매칭 유연화 유도 (공백 제거)
+# 컬럼명 및 문자열 좌우 공백 전처리 일괄 적용
 df.columns = df.columns.str.strip()
 
-# 상권 분류 컬럼 값 정제
-target_col = "상권분류" if "상권분류" in df.columns else (df.columns[0] if len(df.columns) > 0 else "")
-if target_col in df.columns:
-    df[target_col] = df[target_col].astype(str).str.strip()
+target_col = "상권분류" if "상권분류" in df.columns else df.columns[0]
+df[target_col] = df[target_col].astype(str).str.strip()
 
-# 데이터 독립 복사본 생성 및 각 상권 100개 슬라이싱
 seongpo_df = df[df[target_col].str.contains("성포", na=False)].head(100).copy()
 jungang_df = df[df[target_col].str.contains("중앙", na=False)].head(100).copy()
-
 
 # 3. PPDAC 기반 사이드바 스토리 내비게이션
 st.sidebar.markdown("# 🧭 PPDAC 프로세스")
@@ -71,17 +77,18 @@ page = st.sidebar.radio(
      "📂 2. Data (데이터 수집 및 정제)", 
      "🧪 3. Analysis (가설 검증 및 분석)", 
      "💡 4. Conclusion (인사이트 및 결론)"],
-    key="ppdac_navigation_final"
+    key="ppdac_navigation_cloud_fix"
 )
 st.sidebar.markdown("---")
-st.sidebar.caption("안산시 청소년 로컬 정책 연구 대시보드 v7.1")
+st.sidebar.caption("안산시 청소년 로컬 정책 연구 대시보드 v7.3")
 
 
 # ==========================================
 # Page 1. Problem & Plan (문제 정의 및 계획)
 # ==========================================
 if page == "📍 1. Problem & Plan (문제 및 계획)":
-    st.title("📍 1. Problem & Plan <span class='badge'>Step 1 & 2</span>", unsafe_allow_html=True)
+    # 🚨 [수정 완화] st.title 대신 st.markdown을 써서 HTML Badge 태그 에러를 완벽히 해결!
+    st.markdown("<h1>📍 1. Problem & Plan <span class='badge'>Step 1 & 2</span></h1>", unsafe_allow_html=True)
     st.markdown("##### 탐구 질문을 설정하고 이를 통계적으로 검증하기 위한 구체적인 연구 계획을 수립합니다.")
     
     st.markdown("""
@@ -105,12 +112,12 @@ if page == "📍 1. Problem & Plan (문제 및 계획)":
     
     st.info("💡 왼쪽 사이드바 메뉴를 통해 다음 단계인 '2. Data'로 이동하여 수집된 데이터 세트를 확인하세요.")
 
-
 # ==========================================
 # Page 2. Data (데이터 수집 및 정제)
 # ==========================================
 elif page == "📂 2. Data (데이터 수집 및 정제)":
-    st.title("📂 2. Data Collection & Cleaning <span class='badge'>Step 3</span>", unsafe_allow_html=True)
+    # 🚨 st.title -> st.markdown으로 변경하여 에러 방지
+    st.markdown("<h1>📂 2. Data Collection & Cleaning <span class='badge'>Step 3</span></h1>", unsafe_allow_html=True)
     st.markdown("##### 업로드된 `진짜 최최종.csv` 파일을 바탕으로 정제된 변수 프로필을 검증합니다.")
     
     st.markdown(f"### 📊 최신 데이터프레임 확인 (총 점포 수: {len(df)}개)")
@@ -134,12 +141,12 @@ elif page == "📂 2. Data (데이터 수집 및 정제)":
         * **상권 표본 무결성 확보:** 양측 상권에서 편향 없이 수집된 실존 매장을 각각 **정확히 상위 100개씩 추출**하여 대조 실험의 통계적 정밀도를 극대화했습니다.
         """)
 
-
 # ==========================================
 # Page 3. Analysis (가설 검증 및 분석)
 # ==========================================
 elif page == "🧪 3. Analysis (가설 검증 및 분석)":
-    st.title("🧪 3. Statistical Analysis <span class='badge'>Step 4</span>", unsafe_allow_html=True)
+    # 🚨 st.title -> st.markdown으로 변경하여 에러 방지
+    st.markdown("<h1>🧪 3. Statistical Analysis <span class='badge'>Step 4</span></h1>", unsafe_allow_html=True)
     st.markdown("##### 두 상권의 업종 구성과 지출 예산 한도를 연계하여 가설의 유의성을 검증합니다.")
     
     tab1, tab2 = st.tabs(["📊 상권별 업종 구조 대조", "💰 경제적 예산 수용력 실험"])
@@ -170,9 +177,8 @@ elif page == "🧪 3. Analysis (가설 검증 및 분석)":
 
     with tab2:
         st.markdown("### 💵 가설 검증: 학생 지출 예산 한도별 점포 수 시뮬레이션")
-        user_budget = st.slider("💰 학생 1인당 지출 예산 한도 설정 (원)", 1000, 30000, 8500, step=500, key="analysis_slider_final")
+        user_budget = st.slider("💰 학생 1인당 지출 예산 한도 설정 (원)", 1000, 30000, 8500, step=500, key="cloud_fix_slider")
         
-        # 안전한 조건부 카운트 계산
         if not seongpo_df.empty and "평균가격" in seongpo_df.columns and "주타겟층" in seongpo_df.columns:
             sp_count = len(seongpo_df[(seongpo_df["평균가격"] <= user_budget) & (seongpo_df["주타겟층"].astype(str).str.contains("10"))])
         else:
@@ -194,15 +200,14 @@ elif page == "🧪 3. Analysis (가설 검증 및 분석)":
         
         st.warning(f"💡 **가설 검증 결론:** 슬라이더를 낮춰 예산을 청소년 평균 소득 수준으로 맞출수록 성포동 상권 내 수용 가능 매장 수는 0에 가깝게 수렴합니다. 이는 성포동의 '경제적 단절'이 청소년 원거리 유출의 핵심 독립변수임을 수학적으로 입증합니다.")
 
-
 # ==========================================
 # Page 4. Conclusion (인사이트 및 결론)
 # ==========================================
 elif page == "💡 4. Conclusion (인사이트 및 결론)":
-    st.title("💡 4. Conclusion & Action Plan <span class='badge'>Step 5</span>", unsafe_allow_html=True)
+    # 🚨 st.title -> st.markdown으로 변경하여 에러 방지
+    st.markdown("<h1>💡 4. Conclusion & Action Plan <span class='badge'>Step 5</span></h1>", unsafe_allow_html=True)
     st.markdown("##### 수집된 통계 원천 데이터를 최종 해석하고 이에 대응하는 안산시 행정 정책 제언을 제안합니다.")
     
-    # 레이더 차트 종합 요약
     all_categories = df["업종분류"].unique() if "업종분류" in df.columns else []
     if not seongpo_df.empty and not jungang_df.empty and len(all_categories) > 0:
         sp_v = seongpo_df["업종분류"].value_counts().reindex(all_categories, fill_value=0)
@@ -215,8 +220,6 @@ elif page == "💡 4. Conclusion (인사이트 및 결론)":
         st.plotly_chart(fig_radar, use_container_width=True)
 
     st.markdown("---")
-    
-    # 정책 제언 섹션
     st.markdown("<h2>🏛️ 안산시청 정책 제언: 주거 밀집 지역 내 '공공 청소년 쉼터' 조성 촉구</h2>", unsafe_allow_html=True)
     
     st.success("""
